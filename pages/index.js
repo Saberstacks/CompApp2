@@ -2,47 +2,52 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 
 export default function HomePage() {
+  const [query, setQuery] = useState('');
   const [url, setUrl] = useState('');
-  const [keyword, setKeyword] = useState('');
   const router = useRouter();
 
-  const handleSubmit = (event) => {
+  const handleSearchSubmit = (event) => {
     event.preventDefault();
+    if (query.trim()) {
+      router.push(`/results?query=${encodeURIComponent(query)}`);
+    }
+  };
 
-    // Ensure the URL and keyword are not empty
-    if (url.trim() && keyword.trim()) {
-      // Redirect to results page with query parameters
-      router.push(`/results?url=${encodeURIComponent(url)}&keyword=${encodeURIComponent(keyword)}`);
+  const handleAnalysisSubmit = (event) => {
+    event.preventDefault();
+    if (url.trim()) {
+      router.push(`/analyze?url=${encodeURIComponent(url)}`);
     }
   };
 
   return (
     <div>
-      <h1>On-Page Analysis Tool</h1>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="url">Website URL:</label>
-          <input
-            type="url"
-            id="url"
-            name="url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label htmlFor="keyword">Keyword:</label>
-          <input
-            type="text"
-            id="keyword"
-            name="keyword"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            required
-          />
-        </div>
-        <button type="submit">Submit</button>
+      <h1>SEO Analysis Tool</h1>
+
+      {/* Search Query Form */}
+      <form onSubmit={handleSearchSubmit}>
+        <h2>Search Query</h2>
+        <input
+          type="text"
+          placeholder="e.g., plumber in Miami"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          required
+        />
+        <button type="submit">Search</button>
+      </form>
+
+      {/* On-Page Analysis Form */}
+      <form onSubmit={handleAnalysisSubmit}>
+        <h2>On-Page Analysis</h2>
+        <input
+          type="url"
+          placeholder="https://example.com"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          required
+        />
+        <button type="submit">Analyze</button>
       </form>
     </div>
   );
