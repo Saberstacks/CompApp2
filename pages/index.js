@@ -1,47 +1,48 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 
-export default function Home() {
+export default function HomePage() {
+  const [url, setUrl] = useState('');
   const [keyword, setKeyword] = useState('');
-  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!keyword.trim()) {
-      alert('Please enter a keyword.');
-      return;
-    }
+  const handleSubmit = (event) => {
+    event.preventDefault();
 
-    setLoading(true);
-
-    try {
-      router.push(`/results?keyword=${encodeURIComponent(keyword)}`);
-    } catch (error) {
-      console.error('Search Error:', error.message);
-      alert('An error occurred while submitting your search.');
-    } finally {
-      setLoading(false);
+    // Ensure the URL and keyword are not empty
+    if (url.trim() && keyword.trim()) {
+      // Redirect to results page with query parameters
+      router.push(`/results?url=${encodeURIComponent(url)}&keyword=${encodeURIComponent(keyword)}`);
     }
   };
 
   return (
     <div>
-      <h1>Search Competitor Analysis Tool</h1>
-      <form onSubmit={handleSearch}>
-        <label>
-          Keyword (Include location in your query for regional results):
+      <h1>On-Page Analysis Tool</h1>
+      <form onSubmit={handleSubmit}>
+        <div>
+          <label htmlFor="url">Website URL:</label>
           <input
-            type="text"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            placeholder="e.g., Plumbers in Miami"
+            type="url"
+            id="url"
+            name="url"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
             required
           />
-        </label>
-        <button type="submit" disabled={loading}>
-          {loading ? 'Loading...' : 'Search'}
-        </button>
+        </div>
+        <div>
+          <label htmlFor="keyword">Keyword:</label>
+          <input
+            type="text"
+            id="keyword"
+            name="keyword"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            required
+          />
+        </div>
+        <button type="submit">Submit</button>
       </form>
     </div>
   );
