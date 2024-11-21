@@ -1,40 +1,63 @@
 import axios from 'axios';
-import cheerio from 'cheerio';
 
 export default async function handler(req, res) {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ message: 'Method Not Allowed' });
+  if (req.method !== 'GET') {
+    return res.status(405).json({ message: 'Method Not Allowed' });
+  }
+
+  const { keyword } = req.query;
+
+  if (!keyword) {
+    return res.status(400).json({ message: 'Keyword is required.' });
+  }
+
+  try {
+    const searchResponse = await axios.get('https://api.serpstack.com/search', {
+      params: {
+        access_key: process.env.SERPSTACK_API_KEY,
+        query: keyword,
+        type: 'web',
+      },
+    });
+
+    const data = searchResponse.data;
+
+    if (data.error) {
+      console.error('Serpstack API Error:', data.error);
+      return res.status(500).json({ message: data.error.info });
     }
 
-    const { url } = req.body;
+    const mapPackResults = Array.isArray(data.local_results)
+      ? data.local_results.map((item) => ({
+          rank_in_map_pack: item.position || 'N/A',
+          business_name: item.title || 'N/A',
+          address: item.address || 'N/A',
+          average_rating: item.rating || 'N/A',
+          total_reviews: item.reviews || 'N/A',
+          business_type: item.type || 'N/A',
+          url: item.website || '',
+        }))
+      : [];
 
-    if (!url) {
-        return res.status(400).json({ message: 'URL is required.' });
-    }
+    const organicResults = Array.isArray(data.organic_results)
+      ? data.organic_results.slice(0, 5).map((item) => ({
+          rank_in_organic: item.position || 'N/A',
+          page_title: item.title || 'N/A',
+          page_description: item.snippet || 'N/A',
+          url: item.url || '',
+          domain: item.displayed_url || 'N/A',
+        }))
+      : [];
 
-    try {
-        const response = await axios.get(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0',
-            },
-        });
-
-        const html = response.data;
-        const $ = cheerio.load(html);
-
-        const metadata = {
-            title: $('title').text() || 'N/A',
-            metaDescription: $('meta[name="description"]').attr('content') || 'N/A',
-            canonical: $('link[rel="canonical"]').attr('href') || 'N/A',
-            headings: $('h1, h2, h3')
-                .map((_, el) => $(el).text().trim())
-                .get(),
-            imagesWithAlt: $('img[alt]').length,
-            totalImages: $('img').length,
-        };
-
-        res.status(200).json(metadata);
-    } catch (error) {
-        res.status(500).json({ message: `Error analyzing ${url}: ${error.message}` });
-    }
+    res.status(200).json({
+      mapPackResults,
+      organicResults,
+      message: '',
+    });
+  } catch (error) {
+    console.error('API Error:', error.response?.data || error.message);
+    res.status(500).json({
+      message: 'An error occurred while processing your request.',
+    });
+  }
 }
