@@ -16,9 +16,7 @@ export default function ResultRow({ data, type }) {
       <h4>{type === 'map' ? data.business_name : data.page_title}</h4>
       <p>{type === 'map' ? data.address : data.page_description}</p>
       <button onClick={handleAnalyze}>Analyze</button>
-      <a href={data.url} target="_blank" rel="noopener noreferrer">
-        Visit Site
-      </a>
+      <a href={data.url} target="_blank" rel="noopener noreferrer">Visit Site</a>
       <style jsx>{`
         .result-row {
           border: 1px solid #ccc;
@@ -30,9 +28,6 @@ export default function ResultRow({ data, type }) {
         }
         p {
           margin: 0 0 10px;
-        }
-        a {
-          margin-left: 10px;
         }
       `}</style>
     </div>
