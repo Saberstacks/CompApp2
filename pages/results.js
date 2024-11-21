@@ -1,45 +1,45 @@
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
 import MessageBox from '../components/MessageBox';
+import ResultRow from '../components/ResultRow';
 import ErrorBoundary from '../components/ErrorBoundary';
 
 export default function Results() {
   const router = useRouter();
-  const { url, keyword } = router.query;
+  const { query } = router.query;
 
-  const [data, setData] = useState(null);
+  const [mapPackResults, setMapPackResults] = useState([]);
+  const [organicResults, setOrganicResults] = useState([]);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!url || !keyword) return;
+    if (!query) return;
 
     const fetchData = async () => {
       try {
-        const res = await fetch('/api/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ website: url, keyword }),
-        });
-        const result = await res.json();
+        const res = await fetch(`/api/search?keyword=${encodeURIComponent(query)}`);
+        const data = await res.json();
+
         if (res.ok) {
-          setData(result);
+          setMapPackResults(data.mapPackResults || []);
+          setOrganicResults(data.organicResults || []);
         } else {
-          setMessage(result.error || 'An error occurred.');
+          setMessage(data.message || 'An error occurred.');
         }
       } catch (error) {
-        console.error('Error fetching analysis:', error);
-        setMessage('An error occurred while fetching analysis.');
+        console.error('Fetch Error:', error);
+        setMessage('An error occurred while fetching data.');
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [url, keyword]);
+  }, [query]);
 
   if (loading) {
-    return <MessageBox type="info" message="Loading analysis results..." />;
+    return <MessageBox type="info" message="Loading..." />;
   }
 
   if (message) {
@@ -48,36 +48,28 @@ export default function Results() {
 
   return (
     <ErrorBoundary>
-      <div className="results-container">
-        <h1>On-Page Analysis Results for {url}</h1>
-        <h2>SEO Essentials Overview</h2>
-        <div>
-          <strong>SSL Certificate:</strong> {data.sslStatus}
-        </div>
-        <div>
-          <strong>robots.txt:</strong> {data.robotsTxtStatus}
-        </div>
-        <div>
-          <strong>Indexable:</strong> {data.isIndexable ? 'Yes' : 'No'}
-        </div>
-        <div>
-          <strong>Sitemap:</strong> {data.sitemapStatus}
-        </div>
+      <div>
+        <h1>Search Results for "{query}"</h1>
 
-        <h2>Keyword Relevance and Optimization</h2>
-        <div>
-          <strong>Page Title:</strong> {data.pageTitle}
-        </div>
-        <div>
-          <strong>Meta Description:</strong> {data.metaDescription}
-        </div>
-
-        <h2>Content Structure</h2>
-        {data.headings.map((heading, idx) => (
-          <div key={idx}>
-            <strong>{heading.tag}:</strong> {heading.text}
+        {/* Map Pack Results */}
+        {mapPackResults.length > 0 && (
+          <div>
+            <h2>Map Pack Results</h2>
+            {mapPackResults.map((result, index) => (
+              <ResultRow key={index} data={result} type="map" />
+            ))}
           </div>
-        ))}
+        )}
+
+        {/* Organic Results */}
+        {organicResults.length > 0 && (
+          <div>
+            <h2>Organic Results</h2>
+            {organicResults.map((result, index) => (
+              <ResultRow key={index} data={result} type="organic" />
+            ))}
+          </div>
+        )}
       </div>
     </ErrorBoundary>
   );
