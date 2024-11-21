@@ -1,7 +1,7 @@
-const cheerio = require('cheerio');
-const fetch = require('node-fetch');
+import fetch from 'node-fetch';
+import cheerio from 'cheerio';
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
     if (req.method !== 'POST') {
         res.status(405).json({ error: 'Method Not Allowed' });
         return;
@@ -72,4 +72,4 @@ module.exports = async (req, res) => {
         console.error('Error analyzing website:', error);
         res.status(500).json({ error: 'Failed to analyze the website. Please try again.' });
     }
-};
+}
