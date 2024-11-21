@@ -29,7 +29,7 @@ export default async function handler(req, res) {
           rank_in_map_pack: item.position || 'N/A',
           business_name: item.title || 'N/A',
           address: item.address || 'N/A',
-          url: item.website || 'N/A',
+          url: item.website || 'N/A', // Ensure it's always a string
         }))
       : [];
 
@@ -39,7 +39,7 @@ export default async function handler(req, res) {
           rank_in_organic: item.position || 'N/A',
           page_title: item.title || 'N/A',
           page_description: item.snippet || 'N/A',
-          url: item.url || 'N/A',
+          url: typeof item.url === 'string' ? item.url : 'N/A', // Ensure string or fallback
           domain: item.displayed_url || 'N/A',
         }))
       : [];
