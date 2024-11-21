@@ -1,5 +1,5 @@
-const cheerio = require('cheerio');
-const fetch = require('node-fetch');
+import cheerio from 'cheerio';
+import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Parse the JSON body correctly
+    // Parse the request body
     const { website } = JSON.parse(req.body);
 
     if (!website) {
