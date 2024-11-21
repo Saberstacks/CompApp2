@@ -1,24 +1,9 @@
 export default function MessageBox({ type, message }) {
-  const styles = {
-    info: {
-      backgroundColor: '#d9edf7',
-      color: '#31708f',
-      padding: '10px',
-      borderRadius: '5px',
-      marginBottom: '10px',
-    },
-    error: {
-      backgroundColor: '#f2dede',
-      color: '#a94442',
-      padding: '10px',
-      borderRadius: '5px',
-      marginBottom: '10px',
-    },
-  };
+  const color = type === 'error' ? 'red' : type === 'info' ? 'blue' : 'green';
 
   return (
-    <div style={styles[type] || {}}>
-      <p>{message}</p>
+    <div className="message-box" style={{ color }}>
+      {message}
     </div>
   );
 }
