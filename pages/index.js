@@ -3,14 +3,25 @@ import { useRouter } from 'next/router';
 
 export default function Home() {
   const [keyword, setKeyword] = useState('');
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleSearch = (e) => {
+  const handleSearch = async (e) => {
     e.preventDefault();
-    if (keyword.trim()) {
-      router.push(`/results?keyword=${encodeURIComponent(keyword)}`);
-    } else {
+    if (!keyword.trim()) {
       alert('Please enter a keyword.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      router.push(`/results?keyword=${encodeURIComponent(keyword)}`);
+    } catch (error) {
+      console.error('Search Error:', error.message);
+      alert('An error occurred while submitting your search.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -28,7 +39,9 @@ export default function Home() {
             required
           />
         </label>
-        <button type="submit">Search</button>
+        <button type="submit" disabled={loading}>
+          {loading ? 'Loading...' : 'Search'}
+        </button>
       </form>
     </div>
   );
