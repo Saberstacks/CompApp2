@@ -4,7 +4,11 @@ export default function ResultRow({ data, type }) {
   const router = useRouter();
 
   const handleAnalyze = () => {
-    router.push(`/results?url=${encodeURIComponent(data.url)}&type=${type}`);
+    const url = encodeURIComponent(data.url || data.website);
+    const keyword = encodeURIComponent(data.page_title || data.business_name || "N/A");
+    localStorage.setItem('website', data.url || data.website);
+    localStorage.setItem('keyword', data.page_title || data.business_name || "N/A");
+    router.push(`/results?website=${url}&keyword=${keyword}`);
   };
 
   return (
