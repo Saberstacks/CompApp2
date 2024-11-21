@@ -6,7 +6,7 @@ import ErrorBoundary from '../components/ErrorBoundary';
 
 export default function Results() {
   const router = useRouter();
-  const { keyword } = router.query;
+  const { keyword, city, state } = router.query;
 
   const [mapPackResults, setMapPackResults] = useState([]);
   const [organicResults, setOrganicResults] = useState([]);
