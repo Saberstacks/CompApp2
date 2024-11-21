@@ -1,69 +1,75 @@
 const cheerio = require('cheerio');
-const https = require('https');
+const fetch = require('node-fetch');
 
 module.exports = async (req, res) => {
     if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method Not Allowed' });
+        res.status(405).json({ error: 'Method Not Allowed' });
+        return;
     }
 
     const { website } = req.body;
+
     if (!website) {
-        return res.status(400).json({ error: 'Website URL is required.' });
+        res.status(400).json({ error: 'Website URL is required.' });
+        return;
     }
 
-    let url = website.trim();
-    if (!/^https?:\/\//i.test(url)) {
-        url = 'https://' + url;
+    let formattedURL;
+
+    try {
+        // Ensure URL is properly formatted
+        formattedURL = website.trim();
+        if (!/^https?:\/\//i.test(formattedURL)) {
+            formattedURL = `https://${formattedURL}`;
+        }
+        new URL(formattedURL); // Validate URL format
+    } catch {
+        res.status(400).json({ error: 'Invalid URL format.' });
+        return;
     }
 
     try {
-        // Fetch the website's HTML
-        const controller = new AbortController();
-        const timeout = setTimeout(() => {
-            controller.abort();
-        }, 15000);
-
-        const response = await fetch(url, {
-            signal: controller.signal,
+        // Fetch the website
+        const response = await fetch(formattedURL, {
             headers: { 'User-Agent': 'Mozilla/5.0' },
-            agent: url.startsWith('https') ? new https.Agent({ rejectUnauthorized: false }) : undefined,
         });
-
-        clearTimeout(timeout);
 
         if (!response.ok) {
             throw new Error(`Failed to fetch the website: ${response.statusText}`);
         }
 
-        let html = await response.text();
-        html = html.slice(0, 1000000); // Limit HTML size for performance
+        const html = await response.text();
 
-        const $ = cheerio.load(html);
+        // Load the HTML
+        let $;
+        try {
+            $ = cheerio.load(html);
+        } catch (err) {
+            console.error('Error loading HTML with Cheerio:', err);
+            res.status(500).json({ error: 'Failed to parse website content.' });
+            return;
+        }
 
-        // Extract metadata
+        // Extract metadata and other data
         const data = {
             pageTitle: $('title').text() || 'N/A',
             metaDescription: $('meta[name="description"]').attr('content') || 'N/A',
             canonicalUrl: $('link[rel="canonical"]').attr('href') || 'N/A',
-            sslStatus: url.startsWith('https://') ? 'Active' : 'Inactive',
-            robotsTxtStatus: 'Unknown',
+            sslStatus: formattedURL.startsWith('https://') ? 'Active' : 'Inactive',
+            robotsTxtStatus: $('meta[name="robots"]').attr('content') || 'Missing',
             isIndexable: !$('meta[name="robots"]').attr('content')?.includes('noindex'),
             headings: $('h1, h2, h3')
-                .map((_, el) => ({ tag: $(el).prop('tagName'), text: $(el).text().trim() }))
+                .map((_, el) => ({
+                    tag: $(el).prop('tagName'),
+                    text: $(el).text().trim(),
+                }))
                 .get(),
+            internalLinksCount: $('a[href^="/"]').length,
         };
-
-        // Attempt to fetch robots.txt
-        try {
-            const robotsResponse = await fetch(new URL('/robots.txt', url).toString());
-            data.robotsTxtStatus = robotsResponse.ok ? 'Present' : 'Missing';
-        } catch {
-            data.robotsTxtStatus = 'Error fetching robots.txt';
-        }
 
         res.status(200).json(data);
     } catch (error) {
-        console.error('Error analyzing website:', error.message);
+        console.error('Error analyzing website:', error);
         res.status(500).json({ error: 'Failed to analyze the website. Please try again.' });
     }
 };
