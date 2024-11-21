@@ -34,9 +34,9 @@ export default async function handler(req, res) {
     try {
       $ = cheerio.load(response.data);
     } catch (error) {
-      throw new Error('Failed to load HTML with Cheerio.');
+      throw new Error('Failed to parse HTML with Cheerio.');
     }
-    console.log('Cheerio loaded the HTML successfully.');
+    console.log('Cheerio successfully loaded the HTML.');
 
     // Extract metadata
     const analysis = {
@@ -51,6 +51,11 @@ export default async function handler(req, res) {
         .get(),
     };
 
+    // Minimal fallback data if analysis is incomplete
+    if (!analysis.title && !analysis.metaDescription && analysis.headings.length === 0) {
+      throw new Error('Website content could not be analyzed. It may rely on JavaScript or block automated requests.');
+    }
+
     res.status(200).json(analysis);
   } catch (error) {
     console.error('Error analyzing website:', error.message);
@@ -59,8 +64,10 @@ export default async function handler(req, res) {
     let userMessage = 'Failed to analyze the website.';
     if (error.message.includes('Invalid HTML response')) {
       userMessage = 'The website returned invalid or non-HTML content. Try a different site.';
-    } else if (error.message.includes('Failed to load HTML with Cheerio')) {
+    } else if (error.message.includes('Failed to parse HTML')) {
       userMessage = 'Unable to process the website\'s content. The page might rely on JavaScript.';
+    } else if (error.message.includes('Website content could not be analyzed')) {
+      userMessage = 'The website\'s content could not be analyzed. It might block automated requests.';
     }
 
     res.status(500).json({ error: userMessage });
