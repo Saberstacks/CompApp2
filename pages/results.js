@@ -1,14 +1,12 @@
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import ResultRow from '../components/ResultRow';
-import MessageBox from '../components/MessageBox';
 
 export default function Results() {
   const router = useRouter();
   const { keyword } = router.query;
 
-  const [mapPackResults, setMapPackResults] = useState([]);
-  const [organicResults, setOrganicResults] = useState([]);
+  const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -18,13 +16,11 @@ export default function Results() {
     const fetchResults = async () => {
       try {
         const res = await fetch(`/api/search?keyword=${encodeURIComponent(keyword)}`);
-        if (!res.ok) throw new Error('Failed to fetch search results.');
+        if (!res.ok) throw new Error('Failed to fetch results.');
 
         const data = await res.json();
-        setMapPackResults(data.mapPackResults || []);
-        setOrganicResults(data.organicResults || []);
+        setResults(data.organicResults || []);
       } catch (err) {
-        console.error(err.message);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -35,18 +31,17 @@ export default function Results() {
   }, [keyword]);
 
   if (loading) {
-    return <MessageBox type="info" message="Loading search results..." />;
+    return <p>Loading search results...</p>;
   }
 
   if (error) {
-    return <MessageBox type="error" message={error} />;
+    return <p>Error: {error}</p>;
   }
 
   return (
     <div>
       <h1>Search Results for "{keyword}"</h1>
-      <h2>Organic Results</h2>
-      {organicResults.map((result, index) => (
+      {results.map((result, index) => (
         <ResultRow key={index} data={result} type="organic" />
       ))}
     </div>
