@@ -1,54 +1,73 @@
-const cheerio = require('cheerio');
-const https = require('https');
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
+import MessageBox from '../components/MessageBox';
 
-module.exports = async (req, res) => {
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method Not Allowed' });
-    return;
-  }
+export default function Analyze() {
+  const router = useRouter();
+  const { website, keyword } = router.query;
 
-  const { website, keyword } = req.body || {};
+  const [data, setData] = useState(null);
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  if (!website || !keyword) {
-    res.status(400).json({ error: 'Please provide both a website URL and a keyword.' });
-    return;
-  }
+  useEffect(() => {
+    if (!website || !keyword) return;
 
-  try {
-    const response = await fetch(website, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0',
-        'Accept': 'text/html',
-      },
-      agent: new https.Agent({ rejectUnauthorized: false }),
-    });
+    const fetchAnalysis = async () => {
+      try {
+        const res = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: `website=${encodeURIComponent(website)}&keyword=${encodeURIComponent(keyword)}`,
+        });
+        const analysisData = await res.json();
 
-    if (!response.ok) {
-      throw new Error(`Fetch error: ${response.status} ${response.statusText}`);
-    }
-
-    const html = await response.text();
-    const $ = cheerio.load(html);
-
-    const sslStatus = website.startsWith('https') ? 'Active' : 'Inactive';
-    const title = $('title').text();
-    const metaDescription = $('meta[name="description"]').attr('content') || 'N/A';
-    const headings = $('h1, h2, h3')
-      .map((i, el) => ({
-        tag: $(el).prop('tagName'),
-        text: $(el).text(),
-      }))
-      .get();
-
-    const results = {
-      ssl: sslStatus,
-      title,
-      metaDescription,
-      headings,
+        if (res.ok) {
+          setData(analysisData);
+        } else {
+          setMessage(analysisData.error || 'An error occurred while analyzing the page.');
+        }
+      } catch (error) {
+        console.error('Analysis Fetch Error:', error);
+        setMessage('An error occurred while fetching analysis data.');
+      } finally {
+        setLoading(false);
+      }
     };
 
-    res.status(200).json(results);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    fetchAnalysis();
+  }, [website, keyword]);
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <MessageBox type="info" message="Analyzing..." />
+      </div>
+    );
   }
-};
+
+  if (message) {
+    return (
+      <div className="error-container">
+        <MessageBox type="error" message={message} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="analysis-container">
+      <h1>Analysis Results for {website}</h1>
+      <pre>{JSON.stringify(data, null, 2)}</pre>
+      <style jsx>{`
+        .analysis-container {
+          padding: 20px;
+        }
+        .loading-container {
+          padding: 20px;
+        }
+        .error-container {
+          padding: 20px;
+        }
+      `}</style
