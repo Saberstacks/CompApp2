@@ -4,17 +4,16 @@ export default function ResultRow({ data, type }) {
   const router = useRouter();
 
   const handleAnalyze = () => {
-    const url = encodeURIComponent(data.url || data.website);
-    const keyword = encodeURIComponent(data.page_title || data.business_name || "N/A");
-    localStorage.setItem('website', data.url || data.website);
-    localStorage.setItem('keyword', data.page_title || data.business_name || "N/A");
-    router.push(`/results?website=${url}&keyword=${keyword}`);
+    const website = encodeURIComponent(data.url || data.business_name);
+    const keyword = encodeURIComponent(router.query.keyword || '');
+    router.push(`/analyze?website=${website}&keyword=${keyword}`);
   };
 
   return (
     <div className="result-row">
       <h4>
-        {type === 'map' ? data.business_name : data.page_title} (Rank: {type === 'map' ? data.rank_in_map_pack : data.rank_in_organic})
+        {type === 'map' ? data.business_name : data.page_title} (Rank:{' '}
+        {type === 'map' ? data.rank_in_map_pack : data.rank_in_organic || 'N/A'})
       </h4>
       <p>{type === 'map' ? data.address : data.page_description}</p>
       <button onClick={handleAnalyze}>Analyze</button>
