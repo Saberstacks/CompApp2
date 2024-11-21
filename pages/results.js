@@ -14,11 +14,15 @@ export default function Results() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!keyword) return;
+    if (!keyword || !city || !state) return;
 
     const fetchData = async () => {
       try {
-        const res = await fetch(`/api/search?keyword=${encodeURIComponent(keyword)}`);
+        const res = await fetch(
+          `/api/search?keyword=${encodeURIComponent(
+            keyword
+          )}&city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}`
+        );
         const data = await res.json();
 
         if (res.ok) {
@@ -36,7 +40,7 @@ export default function Results() {
     };
 
     fetchData();
-  }, [keyword]);
+  }, [keyword, city, state]);
 
   if (loading) {
     return (
@@ -50,12 +54,16 @@ export default function Results() {
     <ErrorBoundary>
       <div className="results-container">
         {message && <MessageBox type="error" message={message} />}
-        <h1>Search Results for "{keyword}"</h1>
+        <h1>
+          Search Results for "{keyword}" in "{city}, {state}"
+        </h1>
         {mapPackResults.length > 0 && (
           <>
             <h2>Map Pack Results</h2>
             {mapPackResults.map((result, index) =>
-              result ? <ResultRow key={index} data={result} type="map" /> : null
+              result ? (
+                <ResultRow key={index} data={result} type="map" />
+              ) : null
             )}
           </>
         )}
@@ -63,7 +71,9 @@ export default function Results() {
           <>
             <h2>Organic Results</h2>
             {organicResults.map((result, index) =>
-              result ? <ResultRow key={index} data={result} type="organic" /> : null
+              result ? (
+                <ResultRow key={index} data={result} type="organic" />
+              ) : null
             )}
           </>
         )}
