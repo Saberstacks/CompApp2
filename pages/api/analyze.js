@@ -13,16 +13,19 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Ensure the website URL starts with http/https
+    // Ensure valid URL
     const url = website.startsWith('http') ? website : `https://${website}`;
 
+    // Fetch website HTML
     const response = await axios.get(url, {
       headers: { 'User-Agent': 'Mozilla/5.0' },
     });
-
     const html = response.data;
+
+    // Load HTML with Cheerio
     const $ = cheerio.load(html);
 
+    // Extract metadata
     const metadata = {
       pageTitle: $('title').text() || 'N/A',
       metaDescription: $('meta[name="description"]').attr('content') || 'N/A',
