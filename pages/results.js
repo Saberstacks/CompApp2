@@ -1,114 +1,56 @@
-import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
-import MessageBox from '../components/MessageBox';
-import ResultRow from '../components/ResultRow';
-import ErrorBoundary from '../components/ErrorBoundary';
+import { useState } from 'react';
 
 export default function Results() {
-  const router = useRouter();
-  const { keyword } = router.query;
+  const [analysisResults, setAnalysisResults] = useState(null);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const [mapPackResults, setMapPackResults] = useState([]);
-  const [organicResults, setOrganicResults] = useState([]);
-  const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!keyword) return;
-
-    const fetchData = async () => {
-      try {
-        const res = await fetch(`/api/search?keyword=${encodeURIComponent(keyword)}`);
-        const data = await res.json();
-
-        if (res.ok) {
-          setMapPackResults(data.mapPackResults || []);
-          setOrganicResults(data.organicResults || []);
-          setMessage(data.message || '');
-        } else {
-          setMessage(data.message || 'An error occurred.');
-        }
-      } catch (error) {
-        console.error('Fetch Error:', error);
-        setMessage('An error occurred while fetching data.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [keyword]);
-
-  const handleAnalyze = async (url) => {
+  const handleAnalyzeClick = async (website, keyword) => {
     try {
-      const res = await fetch('/api/analyze', {
+      const response = await fetch('/api/analyze', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url }),
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `website=${encodeURIComponent(website)}&keyword=${encodeURIComponent(keyword)}`,
       });
-      const data = await res.json();
 
-      if (res.ok) {
-        router.push(`/analyze?url=${encodeURIComponent(url)}`);
-      } else {
-        setMessage(data.message || 'Error analyzing the competitor site.');
+      if (!response.ok) {
+        const { error } = await response.json();
+        throw new Error(error || 'An error occurred during analysis.');
       }
+
+      const data = await response.json();
+      setAnalysisResults(data);
     } catch (error) {
-      console.error('Analyze Error:', error);
-      setMessage('An error occurred during analysis.');
+      setErrorMessage(error.message);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <MessageBox type="info" message="Loading..." />
-      </div>
-    );
-  }
-
   return (
-    <ErrorBoundary>
-      <div className="results-container">
-        {message && <MessageBox type="error" message={message} />}
-        <h1>Search Results for "{keyword}"</h1>
-        {mapPackResults.length > 0 && (
-          <>
-            <h2>Map Pack Results</h2>
-            {mapPackResults.map((result, index) => (
-              <ResultRow
-                key={index}
-                data={result}
-                type="map"
-                onAnalyze={() => handleAnalyze(result.url)}
-              />
-            ))}
-          </>
-        )}
-        {organicResults.length > 0 && (
-          <>
-            <h2>Organic Results</h2>
-            {organicResults.map((result, index) => (
-              <ResultRow
-                key={index}
-                data={result}
-                type="organic"
-                onAnalyze={() => handleAnalyze(result.url)}
-              />
-            ))}
-          </>
-        )}
-        <style jsx>{`
-          .results-container {
-            padding: 20px;
-          }
-          .loading-container {
-            padding: 20px;
-          }
-        `}</style>
+    <div>
+      <h1>Search Results</h1>
+
+      {/* Example result item */}
+      <div>
+        <h2>Competitor: Example Website</h2>
+        <button
+          onClick={() => handleAnalyzeClick('https://example.com', 'sample keyword')}
+        >
+          Analyze
+        </button>
       </div>
-    </ErrorBoundary>
+
+      {errorMessage && <p className="error">{errorMessage}</p>}
+      {analysisResults && (
+        <div>
+          <h2>Analysis Results</h2>
+          <pre>{JSON.stringify(analysisResults, null, 2)}</pre>
+        </div>
+      )}
+
+      <style jsx>{`
+        .error {
+          color: red;
+        }
+      `}</style>
+    </div>
   );
 }
