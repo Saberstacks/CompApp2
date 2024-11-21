@@ -29,10 +29,7 @@ export default async function handler(req, res) {
           rank_in_map_pack: item.position || 'N/A',
           business_name: item.title || 'N/A',
           address: item.address || 'N/A',
-          average_rating: item.rating || 'N/A',
-          total_reviews: item.reviews || 'N/A',
-          business_type: item.type || 'N/A',
-          url: item.website || '',
+          url: item.website || 'N/A',
         }))
       : [];
 
@@ -42,7 +39,7 @@ export default async function handler(req, res) {
           rank_in_organic: item.position || 'N/A',
           page_title: item.title || 'N/A',
           page_description: item.snippet || 'N/A',
-          url: item.url || '',
+          url: item.url || 'N/A',
           domain: item.displayed_url || 'N/A',
         }))
       : [];
