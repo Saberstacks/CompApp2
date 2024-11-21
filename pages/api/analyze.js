@@ -1,5 +1,5 @@
 import cheerio from 'cheerio';
-import axios from 'axios';
+import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -7,69 +7,64 @@ export default async function handler(req, res) {
   }
 
   const { website } = req.body;
-  console.log('Received website for analysis:', website);
 
   if (!website) {
     return res.status(400).json({ error: 'Website URL is required.' });
   }
 
   try {
-    // Validate and format the URL
-    const formattedUrl = website.startsWith('http://') || website.startsWith('https://') ? website : `https://${website}`;
-    console.log('Formatted URL:', formattedUrl);
+    // Ensure proper URL formatting
+    const formattedUrl = /^https?:\/\//i.test(website) ? website : `https://${website}`;
+    console.log(`Formatted URL: ${formattedUrl}`);
 
-    // Fetch the webpage
-    const response = await axios.get(formattedUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)' },
+    // Fetch the website content
+    const response = await fetch(formattedUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0',
+      },
     });
 
-    // Check if the response contains valid HTML
-    if (!response || !response.data || typeof response.data !== 'string') {
-      throw new Error('Invalid HTML response from the website.');
-    }
-    console.log('HTML successfully fetched.');
-
-    // Load HTML into Cheerio
-    let $;
-    try {
-      $ = cheerio.load(response.data);
-    } catch (error) {
-      throw new Error('Failed to parse HTML with Cheerio.');
-    }
-    console.log('Cheerio successfully loaded the HTML.');
-
-    // Extract metadata
-    const analysis = {
-      title: $('title').text() || 'N/A',
-      metaDescription: $('meta[name="description"]').attr('content') || 'N/A',
-      canonical: $('link[rel="canonical"]').attr('href') || 'N/A',
-      headings: $('h1, h2, h3')
-        .map((_, el) => ({
-          tag: $(el).prop('tagName'),
-          text: $(el).text().trim(),
-        }))
-        .get(),
-    };
-
-    // Minimal fallback data if analysis is incomplete
-    if (!analysis.title && !analysis.metaDescription && analysis.headings.length === 0) {
-      throw new Error('Website content could not be analyzed. It may rely on JavaScript or block automated requests.');
+    if (!response.ok) {
+      throw new Error(`Failed to fetch the website: ${response.statusText}`);
     }
 
-    res.status(200).json(analysis);
+    const html = await response.text();
+    const $ = cheerio.load(html);
+
+    // Extract data with graceful fallbacks
+    const pageTitle = $('title').text() || 'No title available';
+    const metaDescription =
+      $('meta[name="description"]').attr('content') || 'No meta description available';
+    const canonicalUrl = $('link[rel="canonical"]').attr('href') || 'No canonical URL available';
+
+    // Handle headings
+    const headings = [];
+    $('h1, h2, h3').each((_, el) => {
+      headings.push({
+        tag: $(el).prop('tagName'),
+        text: $(el).text().trim() || 'No text available',
+      });
+    });
+
+    // Internal links count
+    const internalLinks = $('a[href^="/"]').length;
+
+    // Images with alt attributes
+    const imagesWithAlt = $('img[alt]').length;
+    const totalImages = $('img').length;
+
+    // Return collected data
+    res.status(200).json({
+      pageTitle,
+      metaDescription,
+      canonicalUrl,
+      headings,
+      internalLinks,
+      imagesWithAlt,
+      totalImages,
+    });
   } catch (error) {
-    console.error('Error analyzing website:', error.message);
-
-    // Send user-friendly error messages
-    let userMessage = 'Failed to analyze the website.';
-    if (error.message.includes('Invalid HTML response')) {
-      userMessage = 'The website returned invalid or non-HTML content. Try a different site.';
-    } else if (error.message.includes('Failed to parse HTML')) {
-      userMessage = 'Unable to process the website\'s content. The page might rely on JavaScript.';
-    } else if (error.message.includes('Website content could not be analyzed')) {
-      userMessage = 'The website\'s content could not be analyzed. It might block automated requests.';
-    }
-
-    res.status(500).json({ error: userMessage });
+    console.error(`Error analyzing website: ${error.message}`);
+    res.status(500).json({ error: 'Failed to analyze the website. Please try again.' });
   }
 }
