@@ -25,10 +25,16 @@ export default async function handler(req, res) {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch the website: ${response.statusText}`);
+      throw new Error(`Failed to fetch the website: ${response.status} ${response.statusText}`);
     }
 
     const html = await response.text();
+
+    // Verify the HTML is not empty or invalid
+    if (!html || html.trim() === '') {
+      throw new Error('Empty or invalid HTML response.');
+    }
+
     const $ = cheerio.load(html);
 
     // Extract data with graceful fallbacks
@@ -65,6 +71,23 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error(`Error analyzing website: ${error.message}`);
-    res.status(500).json({ error: 'Failed to analyze the website. Please try again.' });
+
+    // Provide a clear error message for frontend
+    if (error.message.includes('403')) {
+      return res.status(403).json({
+        error: 'This site is blocking analysis or requires login.',
+      });
+    }
+
+    if (error.message.includes('load')) {
+      return res.status(500).json({
+        error: 'Failed to parse the site’s HTML. The site may rely heavily on JavaScript.',
+      });
+    }
+
+    // Generic error fallback
+    res.status(500).json({
+      error: 'An unexpected error occurred. Please try another site.',
+    });
   }
 }
