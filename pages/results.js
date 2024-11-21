@@ -1,76 +1,54 @@
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
-import MessageBox from '../components/MessageBox';
 import ResultRow from '../components/ResultRow';
-import ErrorBoundary from '../components/ErrorBoundary';
+import MessageBox from '../components/MessageBox';
 
 export default function Results() {
   const router = useRouter();
-  const { query } = router.query;
+  const { keyword } = router.query;
 
   const [mapPackResults, setMapPackResults] = useState([]);
   const [organicResults, setOrganicResults] = useState([]);
-  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!query) return;
+    if (!keyword) return;
 
-    const fetchData = async () => {
+    const fetchResults = async () => {
       try {
-        const res = await fetch(`/api/search?keyword=${encodeURIComponent(query)}`);
-        const data = await res.json();
+        const res = await fetch(`/api/search?keyword=${encodeURIComponent(keyword)}`);
+        if (!res.ok) throw new Error('Failed to fetch search results.');
 
-        if (res.ok) {
-          setMapPackResults(data.mapPackResults || []);
-          setOrganicResults(data.organicResults || []);
-        } else {
-          setMessage(data.message || 'An error occurred.');
-        }
-      } catch (error) {
-        console.error('Fetch Error:', error);
-        setMessage('An error occurred while fetching data.');
+        const data = await res.json();
+        setMapPackResults(data.mapPackResults || []);
+        setOrganicResults(data.organicResults || []);
+      } catch (err) {
+        console.error(err.message);
+        setError(err.message);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
-  }, [query]);
+    fetchResults();
+  }, [keyword]);
 
   if (loading) {
-    return <MessageBox type="info" message="Loading..." />;
+    return <MessageBox type="info" message="Loading search results..." />;
   }
 
-  if (message) {
-    return <MessageBox type="error" message={message} />;
+  if (error) {
+    return <MessageBox type="error" message={error} />;
   }
 
   return (
-    <ErrorBoundary>
-      <div>
-        <h1>Search Results for "{query}"</h1>
-
-        {/* Map Pack Results */}
-        {mapPackResults.length > 0 && (
-          <div>
-            <h2>Map Pack Results</h2>
-            {mapPackResults.map((result, index) => (
-              <ResultRow key={index} data={result} type="map" />
-            ))}
-          </div>
-        )}
-
-        {/* Organic Results */}
-        {organicResults.length > 0 && (
-          <div>
-            <h2>Organic Results</h2>
-            {organicResults.map((result, index) => (
-              <ResultRow key={index} data={result} type="organic" />
-            ))}
-          </div>
-        )}
-      </div>
-    </ErrorBoundary>
+    <div>
+      <h1>Search Results for "{keyword}"</h1>
+      <h2>Organic Results</h2>
+      {organicResults.map((result, index) => (
+        <ResultRow key={index} data={result} type="organic" />
+      ))}
+    </div>
   );
 }
