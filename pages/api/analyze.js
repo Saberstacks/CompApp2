@@ -1,53 +1,75 @@
-const cheerio = require('cheerio');
-const https = require('https');
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method Not Allowed' });
-    return;
-  }
+export default function Analyze() {
+  const router = useRouter();
+  const { website } = router.query;
 
-  let body = '';
-  req.on('data', (chunk) => {
-    body += chunk.toString();
-  });
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  req.on('end', async () => {
-    const params = new URLSearchParams(body);
-    const websiteParam = params.get('website');
-    const keywordParam = params.get('keyword');
+  useEffect(() => {
+    if (!website) return;
 
-    if (!websiteParam || !keywordParam) {
-      res.status(400).json({ error: 'Please provide both a website URL and a keyword.' });
-      return;
-    }
-
-    try {
-      const url = websiteParam.startsWith('http') ? websiteParam : `https://${websiteParam}`;
-      const response = await fetch(url, {
-        headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'text/html' },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error fetching website: ${response.statusText}`);
+    const fetchAnalysis = async () => {
+      try {
+        const res = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: `website=${encodeURIComponent(website)}`,
+        });
+        const result = await res.json();
+        if (res.ok) {
+          setData(result);
+        } else {
+          setError(result.error || 'An error occurred.');
+        }
+      } catch (err) {
+        console.error('Fetch Error:', err);
+        setError('An error occurred while fetching analysis data.');
+      } finally {
+        setLoading(false);
       }
+    };
 
-      const html = await response.text();
-      const $ = cheerio.load(html);
+    fetchAnalysis();
+  }, [website]);
 
-      const title = $('title').text() || 'N/A';
-      const metaDescription = $('meta[name="description"]').attr('content') || 'N/A';
-      const h1 = $('h1').first().text() || 'N/A';
+  if (loading) return <p>Loading analysis...</p>;
+  if (error) return <p>Error: {error}</p>;
 
-      res.status(200).json({
-        title,
-        metaDescription,
-        h1,
-        success: true,
-      });
-    } catch (error) {
-      console.error('Analyze API Error:', error.message);
-      res.status(500).json({ error: 'An error occurred while analyzing the page.' });
-    }
-  });
+  return (
+    <div>
+      <h1>On-Page Analysis for {website}</h1>
+      <div>
+        <h2>Metadata</h2>
+        <ul>
+          <li><strong>Title:</strong> {data.pageTitle || 'N/A'}</li>
+          <li><strong>Meta Description:</strong> {data.metaDescription || 'N/A'}</li>
+          <li><strong>Canonical URL:</strong> {data.canonicalUrl || 'N/A'}</li>
+        </ul>
+
+        <h2>SEO Essentials</h2>
+        <ul>
+          <li><strong>SSL:</strong> {data.sslStatus}</li>
+          <li><strong>Robots.txt:</strong> {data.robotsTxtStatus}</li>
+          <li><strong>Indexable:</strong> {data.isIndexable}</li>
+          <li><strong>Sitemap:</strong> {data.sitemapStatus}</li>
+        </ul>
+
+        <h2>Content Analysis</h2>
+        <ul>
+          <li><strong>Headings:</strong></li>
+          {data.headings.map((heading, index) => (
+            <li key={index}>
+              {heading.tag}: {heading.text}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
 }
