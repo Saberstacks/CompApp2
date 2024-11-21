@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   }
 
   const { website } = req.body;
-  console.log('Received website for analysis:', website); // Log the input URL for debugging
+  console.log('Received website for analysis:', website);
 
   if (!website) {
     return res.status(400).json({ error: 'Website URL is required.' });
@@ -16,20 +16,26 @@ export default async function handler(req, res) {
   try {
     // Validate and format the URL
     const formattedUrl = website.startsWith('http://') || website.startsWith('https://') ? website : `https://${website}`;
-    console.log('Formatted URL:', formattedUrl); // Log the formatted URL
+    console.log('Formatted URL:', formattedUrl);
 
     // Fetch the webpage
     const response = await axios.get(formattedUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0' }, // Use a standard user agent
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)' },
     });
 
-    // Check if the response contains HTML
-    if (!response || !response.data) {
-      throw new Error('No valid HTML returned from the website.');
+    // Check if the response contains valid HTML
+    if (!response || !response.data || typeof response.data !== 'string') {
+      throw new Error('Invalid HTML response from the website.');
     }
     console.log('HTML successfully fetched.');
 
-    const $ = cheerio.load(response.data); // Load HTML into Cheerio
+    // Load HTML into Cheerio
+    let $;
+    try {
+      $ = cheerio.load(response.data);
+    } catch (error) {
+      throw new Error('Failed to load HTML with Cheerio.');
+    }
     console.log('Cheerio loaded the HTML successfully.');
 
     // Extract metadata
@@ -47,7 +53,16 @@ export default async function handler(req, res) {
 
     res.status(200).json(analysis);
   } catch (error) {
-    console.error('Error analyzing website:', error.message); // Log the error message
-    res.status(500).json({ error: `Failed to analyze the website: ${error.message}` });
+    console.error('Error analyzing website:', error.message);
+
+    // Send user-friendly error messages
+    let userMessage = 'Failed to analyze the website.';
+    if (error.message.includes('Invalid HTML response')) {
+      userMessage = 'The website returned invalid or non-HTML content. Try a different site.';
+    } else if (error.message.includes('Failed to load HTML with Cheerio')) {
+      userMessage = 'Unable to process the website\'s content. The page might rely on JavaScript.';
+    }
+
+    res.status(500).json({ error: userMessage });
   }
 }
