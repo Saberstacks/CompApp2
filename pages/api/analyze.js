@@ -70,4 +70,7 @@ export default function Analyze() {
         .error-container {
           padding: 20px;
         }
-      `}</style
+      `}</style>
+    </div>
+  );
+}
