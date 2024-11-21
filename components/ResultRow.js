@@ -1,14 +1,10 @@
-import { useRouter } from 'next/router';
-
 export default function ResultRow({ data, type }) {
-  const router = useRouter();
-
   const handleAnalyze = () => {
     if (data.url) {
-      router.push({
-        pathname: '/onPageAnalysis',
-        query: { website: encodeURIComponent(data.url) },
-      });
+      // Use window.open to ensure a new tab is created
+      const encodedUrl = encodeURIComponent(data.url);
+      const analyzeUrl = `/onPageAnalysis?website=${encodedUrl}`;
+      window.open(analyzeUrl, '_blank');
     } else {
       alert('No valid URL available for analysis.');
     }
