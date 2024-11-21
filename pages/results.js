@@ -38,6 +38,10 @@ export default function Results() {
     fetchData();
   }, [keyword]);
 
+  const handleAnalyze = (url) => {
+    router.push(`/analyze?website=${encodeURIComponent(url)}`);
+  };
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -54,17 +58,17 @@ export default function Results() {
         {mapPackResults.length > 0 && (
           <>
             <h2>Map Pack Results</h2>
-            {mapPackResults.map((result, index) =>
-              result ? <ResultRow key={index} data={result} type="map" /> : null
-            )}
+            {mapPackResults.map((result, index) => (
+              <ResultRow key={index} data={result} type="map" onAnalyze={handleAnalyze} />
+            ))}
           </>
         )}
         {organicResults.length > 0 && (
           <>
             <h2>Organic Results</h2>
-            {organicResults.map((result, index) =>
-              result ? <ResultRow key={index} data={result} type="organic" /> : null
-            )}
+            {organicResults.map((result, index) => (
+              <ResultRow key={index} data={result} type="organic" onAnalyze={handleAnalyze} />
+            ))}
           </>
         )}
       </div>
