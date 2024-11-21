@@ -1,80 +1,81 @@
-import { useState } from 'react';
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
+import MessageBox from '../components/MessageBox';
+import ResultRow from '../components/ResultRow';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 export default function Results() {
-  const [results, setResults] = useState(null);
-  const [analyzeData, setAnalyzeData] = useState(null);
-  const [error, setError] = useState('');
+  const router = useRouter();
+  const { keyword } = router.query;
 
-  const fetchSearchResults = async (keyword) => {
-    try {
-      const response = await fetch(`/api/search?keyword=${encodeURIComponent(keyword)}`);
-      const data = await response.json();
+  const [mapPackResults, setMapPackResults] = useState([]);
+  const [organicResults, setOrganicResults] = useState([]);
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(true);
 
-      if (response.ok) {
-        setResults(data);
-      } else {
-        throw new Error(data.error || 'Error fetching search results');
+  useEffect(() => {
+    if (!keyword) return;
+
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`/api/search?keyword=${encodeURIComponent(keyword)}`);
+        const data = await res.json();
+
+        if (res.ok) {
+          setMapPackResults(Array.isArray(data.mapPackResults) ? data.mapPackResults : []);
+          setOrganicResults(Array.isArray(data.organicResults) ? data.organicResults : []);
+        } else {
+          setMessage(data.message || 'An error occurred.');
+        }
+      } catch (error) {
+        console.error('Fetch Error:', error);
+        setMessage('An error occurred while fetching data.');
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      setError(err.message);
-    }
-  };
+    };
 
-  const analyzeCompetitor = async (website, keyword) => {
-    try {
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `website=${encodeURIComponent(website)}&keyword=${encodeURIComponent(keyword)}`,
-      });
+    fetchData();
+  }, [keyword]);
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setAnalyzeData(data);
-      } else {
-        throw new Error(data.error || 'Error analyzing website');
-      }
-    } catch (err) {
-      setError(err.message);
-    }
-  };
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <MessageBox type="info" message="Loading..." />
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <h1>Search Results</h1>
-      <button onClick={() => fetchSearchResults('example keyword')}>Fetch Results</button>
-
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-
-      {results && (
-        <div>
-          <h2>Map Pack Results</h2>
-          {results.mapPackResults.map((result, index) => (
-            <div key={index}>
-              <h3>{result.business_name}</h3>
-              <p>{result.address}</p>
-              <button onClick={() => analyzeCompetitor(result.url, 'example keyword')}>Analyze</button>
-            </div>
-          ))}
-
-          <h2>Organic Results</h2>
-          {results.organicResults.map((result, index) => (
-            <div key={index}>
-              <h3>{result.title}</h3>
-              <p>{result.snippet}</p>
-              <button onClick={() => analyzeCompetitor(result.url, 'example keyword')}>Analyze</button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {analyzeData && (
-        <div>
-          <h2>Analysis Results</h2>
-          <pre>{JSON.stringify(analyzeData, null, 2)}</pre>
-        </div>
-      )}
-    </div>
+    <ErrorBoundary>
+      <div className="results-container">
+        {message && <MessageBox type="error" message={message} />}
+        <h1>Search Results for "{keyword}"</h1>
+        {mapPackResults.length > 0 && (
+          <>
+            <h2>Map Pack Results</h2>
+            {mapPackResults.map((result, index) =>
+              result ? <ResultRow key={index} data={result} type="map" /> : null
+            )}
+          </>
+        )}
+        {organicResults.length > 0 && (
+          <>
+            <h2>Organic Results</h2>
+            {organicResults.map((result, index) =>
+              result ? <ResultRow key={index} data={result} type="organic" /> : null
+            )}
+          </>
+        )}
+        <style jsx>{`
+          .results-container {
+            padding: 20px;
+          }
+          .loading-container {
+            padding: 20px;
+          }
+        `}</style>
+      </div>
+    </ErrorBoundary>
   );
 }
