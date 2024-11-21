@@ -6,12 +6,14 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { website } = req.body;
-  if (!website) {
-    return res.status(400).json({ error: 'Website URL is required.' });
-  }
-
   try {
+    // Parse the JSON body correctly
+    const { website } = JSON.parse(req.body);
+
+    if (!website) {
+      return res.status(400).json({ error: 'Website URL is required.' });
+    }
+
     const response = await fetch(website, {
       headers: { 'User-Agent': 'Mozilla/5.0' },
     });
@@ -30,7 +32,6 @@ export default async function handler(req, res) {
       sslStatus: website.startsWith('https://') ? 'Active' : 'Inactive',
       robotsTxtStatus: $('meta[name="robots"]').attr('content') || 'Missing',
       isIndexable: !$('meta[name="robots"]').attr('content')?.includes('noindex'),
-      sitemapStatus: 'Unknown', // Optional: Add logic to check sitemap
       headings: $('h1, h2, h3')
         .map((_, el) => ({ tag: $(el).prop('tagName'), text: $(el).text().trim() }))
         .get(),
