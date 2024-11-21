@@ -1,5 +1,5 @@
-const cheerio = require('cheerio');
-const fetch = require('node-fetch');
+import cheerio from 'cheerio';
+import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
