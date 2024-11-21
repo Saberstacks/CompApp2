@@ -1,61 +1,60 @@
-import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
+import MessageBox from '../components/MessageBox';
 
 export default function AnalyzePage() {
   const router = useRouter();
-  const { website } = router.query;
+  const { url } = router.query;
 
   const [data, setData] = useState(null);
-  const [error, setError] = useState(null);
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!website) return;
+    if (!url) return;
 
     const fetchAnalysis = async () => {
       try {
-        const response = await fetch(`/api/analyze?website=${encodeURIComponent(website)}`);
-        const result = await response.json();
-
-        if (response.ok) {
+        const res = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ website: url, keyword: '' }),
+        });
+        const result = await res.json();
+        if (res.ok) {
           setData(result);
         } else {
-          setError(result.error || 'Failed to analyze the website.');
+          setMessage(result.error || 'Failed to analyze the website.');
         }
-      } catch (err) {
-        setError('An error occurred while fetching data.');
+      } catch (error) {
+        console.error('Error fetching analysis:', error);
+        setMessage('An error occurred while analyzing the website.');
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchAnalysis();
-  }, [website]);
+  }, [url]);
 
-  if (error) {
-    return <p>{error}</p>;
+  if (loading) {
+    return <MessageBox type="info" message="Analyzing..." />;
   }
 
-  if (!data) {
-    return <p>Loading...</p>;
+  if (message) {
+    return <MessageBox type="error" message={message} />;
   }
 
   return (
     <div>
-      <h1>On-Page Analysis Results for {website}</h1>
-      <h2>Page Title</h2>
-      <p>{data.pageTitle}</p>
-      <h2>Meta Description</h2>
-      <p>{data.metaDescription}</p>
-      <h2>Canonical URL</h2>
-      <p>{data.canonicalUrl}</p>
-      <h2>SSL Status</h2>
-      <p>{data.sslStatus}</p>
-      <h2>Headings</h2>
-      <ul>
-        {data.headings.map((heading, index) => (
-          <li key={index}>
-            {heading.tag}: {heading.text}
-          </li>
-        ))}
-      </ul>
+      <h1>On-Page Analysis for {url}</h1>
+      {/* Render analysis results */}
+      <div>
+        <h2>SEO Essentials</h2>
+        <p><strong>Page Title:</strong> {data.pageTitle}</p>
+        <p><strong>Meta Description:</strong> {data.metaDescription}</p>
+        {/* Additional analysis details */}
+      </div>
     </div>
   );
 }
