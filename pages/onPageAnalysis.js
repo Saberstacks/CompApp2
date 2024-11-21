@@ -17,12 +17,15 @@ export default function OnPageAnalysis() {
 
     const fetchAnalysis = async () => {
       try {
+        // Decode the URL parameter before using it
+        const decodedUrl = decodeURIComponent(website);
+
         const response = await fetch(`/api/analyze`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
-          body: `website=${encodeURIComponent(website)}`,
+          body: `website=${encodeURIComponent(decodedUrl)}`,
         });
 
         const data = await response.json();
