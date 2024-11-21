@@ -4,6 +4,7 @@ export default function ResultRow({ data, type }) {
   const router = useRouter();
 
   const handleAnalyze = () => {
+    console.log('Analyze button clicked. URL:', data.url); // Log the URL being analyzed
     if (data.url) {
       router.push(`/onPageAnalysis?website=${encodeURIComponent(data.url)}`);
     } else {
@@ -15,14 +16,14 @@ export default function ResultRow({ data, type }) {
     <div className="result-row">
       <h4>{type === 'map' ? data.business_name : data.page_title}</h4>
       <p>{type === 'map' ? data.address : data.page_description}</p>
-      {type === 'organic' && (
-        <>
+      {data.url && (
+        <p>
           <a href={data.url} target="_blank" rel="noopener noreferrer">
             Visit Site
           </a>
-          <button onClick={handleAnalyze}>Analyze</button>
-        </>
+        </p>
       )}
+      <button onClick={handleAnalyze}>Analyze</button>
       <style jsx>{`
         .result-row {
           border: 1px solid #ccc;
