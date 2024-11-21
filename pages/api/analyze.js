@@ -1,45 +1,41 @@
 import cheerio from 'cheerio';
-import fetch from 'node-fetch';
+import axios from 'axios';
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
+  if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
+  const { website } = req.query;
+
+  if (!website) {
+    return res.status(400).json({ error: 'Website URL is required.' });
+  }
+
   try {
-    // Parse the request body
-    const { website } = JSON.parse(req.body);
+    // Ensure the website URL starts with http/https
+    const url = website.startsWith('http') ? website : `https://${website}`;
 
-    if (!website) {
-      return res.status(400).json({ error: 'Website URL is required.' });
-    }
-
-    const response = await fetch(website, {
+    const response = await axios.get(url, {
       headers: { 'User-Agent': 'Mozilla/5.0' },
     });
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch the website: ${response.statusText}`);
-    }
-
-    const html = await response.text();
+    const html = response.data;
     const $ = cheerio.load(html);
 
-    const data = {
+    const metadata = {
       pageTitle: $('title').text() || 'N/A',
       metaDescription: $('meta[name="description"]').attr('content') || 'N/A',
       canonicalUrl: $('link[rel="canonical"]').attr('href') || 'N/A',
-      sslStatus: website.startsWith('https://') ? 'Active' : 'Inactive',
-      robotsTxtStatus: $('meta[name="robots"]').attr('content') || 'Missing',
-      isIndexable: !$('meta[name="robots"]').attr('content')?.includes('noindex'),
+      sslStatus: url.startsWith('https://') ? 'Active' : 'Inactive',
       headings: $('h1, h2, h3')
         .map((_, el) => ({ tag: $(el).prop('tagName'), text: $(el).text().trim() }))
         .get(),
     };
 
-    res.status(200).json(data);
+    res.status(200).json(metadata);
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error('Error fetching metadata:', error.message);
     res.status(500).json({ error: 'Failed to analyze the website.' });
   }
 }
