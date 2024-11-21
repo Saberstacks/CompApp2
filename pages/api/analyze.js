@@ -1,5 +1,5 @@
-import fetch from 'node-fetch';
 import cheerio from 'cheerio';
+import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -14,23 +14,15 @@ export default async function handler(req, res) {
         return;
     }
 
-    let formattedURL;
-
     try {
-        // Ensure URL is properly formatted
-        formattedURL = website.trim();
-        if (!/^https?:\/\//i.test(formattedURL)) {
-            formattedURL = `https://${formattedURL}`;
+        // Validate and format the URL
+        let url = website.trim();
+        if (!/^https?:\/\//i.test(url)) {
+            url = 'https://' + url;
         }
-        new URL(formattedURL); // Validate URL format
-    } catch {
-        res.status(400).json({ error: 'Invalid URL format.' });
-        return;
-    }
 
-    try {
-        // Fetch the website
-        const response = await fetch(formattedURL, {
+        // Fetch the website's HTML
+        const response = await fetch(url, {
             headers: { 'User-Agent': 'Mozilla/5.0' },
         });
 
@@ -39,37 +31,41 @@ export default async function handler(req, res) {
         }
 
         const html = await response.text();
+        
+        // Ensure HTML is not empty or invalid
+        if (!html || html.trim().length === 0) {
+            throw new Error('HTML response is empty or invalid.');
+        }
 
-        // Load the HTML
+        // Load the HTML with Cheerio
         let $;
         try {
             $ = cheerio.load(html);
         } catch (err) {
-            console.error('Error loading HTML with Cheerio:', err);
-            res.status(500).json({ error: 'Failed to parse website content.' });
-            return;
+            throw new Error(`Error loading HTML with Cheerio: ${err.message}`);
         }
 
-        // Extract metadata and other data
+        // Extract metadata
+        const pageTitle = $('title').text() || 'N/A';
+        const metaDescription = $('meta[name="description"]').attr('content') || 'N/A';
+        const canonicalUrl = $('link[rel="canonical"]').attr('href') || 'N/A';
+        const headings = $('h1, h2, h3')
+            .map((_, el) => ({ tag: $(el).prop('tagName'), text: $(el).text().trim() }))
+            .get();
+
+        // Prepare response data
         const data = {
-            pageTitle: $('title').text() || 'N/A',
-            metaDescription: $('meta[name="description"]').attr('content') || 'N/A',
-            canonicalUrl: $('link[rel="canonical"]').attr('href') || 'N/A',
-            sslStatus: formattedURL.startsWith('https://') ? 'Active' : 'Inactive',
-            robotsTxtStatus: $('meta[name="robots"]').attr('content') || 'Missing',
-            isIndexable: !$('meta[name="robots"]').attr('content')?.includes('noindex'),
-            headings: $('h1, h2, h3')
-                .map((_, el) => ({
-                    tag: $(el).prop('tagName'),
-                    text: $(el).text().trim(),
-                }))
-                .get(),
-            internalLinksCount: $('a[href^="/"]').length,
+            pageTitle,
+            metaDescription,
+            canonicalUrl,
+            headings,
         };
 
         res.status(200).json(data);
     } catch (error) {
-        console.error('Error analyzing website:', error);
-        res.status(500).json({ error: 'Failed to analyze the website. Please try again.' });
+        console.error('Error analyzing website:', error.message);
+        res.status(500).json({
+            error: `Failed to analyze the website: ${error.message}`,
+        });
     }
 }
