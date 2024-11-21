@@ -1,53 +1,28 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 
-export default function HomePage() {
+export default function Home() {
   const [query, setQuery] = useState('');
-  const [url, setUrl] = useState('');
   const router = useRouter();
 
-  const handleSearchSubmit = (event) => {
-    event.preventDefault();
+  const handleSubmit = (e) => {
+    e.preventDefault();
     if (query.trim()) {
-      router.push(`/results?query=${encodeURIComponent(query)}`);
-    }
-  };
-
-  const handleAnalysisSubmit = (event) => {
-    event.preventDefault();
-    if (url.trim()) {
-      router.push(`/analyze?url=${encodeURIComponent(url)}`);
+      router.push(`/results?keyword=${encodeURIComponent(query)}`);
     }
   };
 
   return (
-    <div>
-      <h1>SEO Analysis Tool</h1>
-
-      {/* Search Query Form */}
-      <form onSubmit={handleSearchSubmit}>
-        <h2>Search Query</h2>
+    <div className="home-container">
+      <h1>Search and Analyze</h1>
+      <form onSubmit={handleSubmit}>
         <input
           type="text"
-          placeholder="e.g., plumber in Miami"
+          placeholder="Enter your search query..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          required
         />
         <button type="submit">Search</button>
-      </form>
-
-      {/* On-Page Analysis Form */}
-      <form onSubmit={handleAnalysisSubmit}>
-        <h2>On-Page Analysis</h2>
-        <input
-          type="url"
-          placeholder="https://example.com"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          required
-        />
-        <button type="submit">Analyze</button>
       </form>
     </div>
   );
