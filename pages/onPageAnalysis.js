@@ -1,41 +1,35 @@
 import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
+import MessageBox from '../components/MessageBox';
 
 export default function OnPageAnalysis() {
   const router = useRouter();
   const { website } = router.query;
 
-  const [analysisData, setAnalysisData] = useState(null);
+  const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
-    if (!website) {
-      setError('No website provided for analysis.');
-      setLoading(false);
-      return;
-    }
+    if (!website) return;
 
     const fetchAnalysis = async () => {
       try {
         const res = await fetch('/api/analyze', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ website }),
         });
 
-        if (!res.ok) {
-          const { error } = await res.json();
-          throw new Error(error || 'Failed to fetch analysis.');
-        }
-
         const data = await res.json();
-        setAnalysisData(data);
-      } catch (err) {
-        console.error('Error fetching analysis:', err.message);
-        setError(err.message);
+        if (res.ok) {
+          setAnalysis(data);
+        } else {
+          setMessage(data.error || 'An error occurred while analyzing the website.');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        setMessage('Failed to analyze the website.');
       } finally {
         setLoading(false);
       }
@@ -45,28 +39,17 @@ export default function OnPageAnalysis() {
   }, [website]);
 
   if (loading) {
-    return <p>Loading analysis results...</p>;
+    return <MessageBox type="info" message="Analyzing website..." />;
   }
 
-  if (error) {
-    return <p>Error: {error}</p>;
+  if (message) {
+    return <MessageBox type="error" message={message} />;
   }
 
   return (
-    <div>
-      <h1>On-Page Analysis Results for {website}</h1>
-      <h2>SEO Essentials Overview</h2>
-      <p><strong>SSL Certificate:</strong> {analysisData.sslStatus}</p>
-      <p><strong>robots.txt:</strong> {analysisData.robotsTxtStatus}</p>
-      <p><strong>Indexable:</strong> {analysisData.isIndexable ? 'Yes' : 'No'}</p>
-      <h2>Headings</h2>
-      <ul>
-        {analysisData.headings.map((heading, index) => (
-          <li key={index}>
-            <strong>{heading.tag}:</strong> {heading.text}
-          </li>
-        ))}
-      </ul>
+    <div className="analysis-container">
+      <h1>On-Page Analysis Results</h1>
+      <pre>{JSON.stringify(analysis, null, 2)}</pre>
     </div>
   );
 }
