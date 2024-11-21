@@ -1,7 +1,11 @@
-export default function ResultRow({ data, type, onAnalyze }) {
+import { useRouter } from 'next/router';
+
+export default function ResultRow({ data, type }) {
+  const router = useRouter();
+
   const handleAnalyze = () => {
-    if (data.url && data.url !== 'N/A') {
-      onAnalyze(data.url);
+    if (data.url) {
+      router.push(`/analyze?website=${encodeURIComponent(data.url)}`);
     } else {
       alert('No valid URL available for analysis.');
     }
@@ -11,16 +15,10 @@ export default function ResultRow({ data, type, onAnalyze }) {
     <div className="result-row">
       <h4>{type === 'map' ? data.business_name : data.page_title}</h4>
       <p>{type === 'map' ? data.address : data.page_description}</p>
-      {data.url && data.url !== 'N/A' ? (
-        <>
-          <a href={data.url} target="_blank" rel="noopener noreferrer">
-            Visit Site
-          </a>
-          <button onClick={handleAnalyze}>Analyze</button>
-        </>
-      ) : (
-        <p>No URL available</p>
-      )}
+      <button onClick={handleAnalyze}>Analyze</button>
+      <a href={data.url} target="_blank" rel="noopener noreferrer">
+        Visit Site
+      </a>
       <style jsx>{`
         .result-row {
           border: 1px solid #ccc;
@@ -34,7 +32,7 @@ export default function ResultRow({ data, type, onAnalyze }) {
           margin: 0 0 10px;
         }
         a {
-          margin-right: 10px;
+          margin-left: 10px;
         }
       `}</style>
     </div>
