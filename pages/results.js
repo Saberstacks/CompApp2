@@ -1,12 +1,12 @@
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
-import MessageBox from '../components/MessageBox';
 import ResultRow from '../components/ResultRow';
+import MessageBox from '../components/MessageBox';
 import ErrorBoundary from '../components/ErrorBoundary';
 
 export default function Results() {
   const router = useRouter();
-  const { keyword, city, state } = router.query;
+  const { keyword } = router.query;
 
   const [mapPackResults, setMapPackResults] = useState([]);
   const [organicResults, setOrganicResults] = useState([]);
@@ -14,20 +14,16 @@ export default function Results() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!keyword || !city || !state) return;
+    if (!keyword) return;
 
     const fetchData = async () => {
       try {
-        const res = await fetch(
-          `/api/search?keyword=${encodeURIComponent(
-            keyword
-          )}&city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}`
-        );
+        const res = await fetch(`/api/search?keyword=${encodeURIComponent(keyword)}`);
         const data = await res.json();
 
         if (res.ok) {
-          setMapPackResults(Array.isArray(data.mapPackResults) ? data.mapPackResults : []);
-          setOrganicResults(Array.isArray(data.organicResults) ? data.organicResults : []);
+          setMapPackResults(data.mapPackResults || []);
+          setOrganicResults(data.organicResults || []);
         } else {
           setMessage(data.message || 'An error occurred.');
         }
@@ -40,7 +36,7 @@ export default function Results() {
     };
 
     fetchData();
-  }, [keyword, city, state]);
+  }, [keyword]);
 
   if (loading) {
     return (
@@ -54,16 +50,12 @@ export default function Results() {
     <ErrorBoundary>
       <div className="results-container">
         {message && <MessageBox type="error" message={message} />}
-        <h1>
-          Search Results for "{keyword}" in "{city}, {state}"
-        </h1>
+        <h1>Search Results for "{keyword}"</h1>
         {mapPackResults.length > 0 && (
           <>
             <h2>Map Pack Results</h2>
             {mapPackResults.map((result, index) =>
-              result ? (
-                <ResultRow key={index} data={result} type="map" />
-              ) : null
+              result ? <ResultRow key={index} data={result} type="map" /> : null
             )}
           </>
         )}
@@ -71,20 +63,10 @@ export default function Results() {
           <>
             <h2>Organic Results</h2>
             {organicResults.map((result, index) =>
-              result ? (
-                <ResultRow key={index} data={result} type="organic" />
-              ) : null
+              result ? <ResultRow key={index} data={result} type="organic" /> : null
             )}
           </>
         )}
-        <style jsx>{`
-          .results-container {
-            padding: 20px;
-          }
-          .loading-container {
-            padding: 20px;
-          }
-        `}</style>
       </div>
     </ErrorBoundary>
   );
