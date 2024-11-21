@@ -5,71 +5,69 @@ export default function Analyze() {
   const router = useRouter();
   const { website } = router.query;
 
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [metadata, setMetadata] = useState(null);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!website) return;
 
-    const fetchAnalysis = async () => {
+    const fetchMetadata = async () => {
       try {
-        const res = await fetch('/api/analyze', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: `website=${encodeURIComponent(website)}`,
-        });
-        const result = await res.json();
+        const res = await fetch(`/api/analyze?website=${encodeURIComponent(website)}`);
+        const data = await res.json();
+
         if (res.ok) {
-          setData(result);
+          setMetadata(data);
         } else {
-          setError(result.error || 'An error occurred.');
+          setError(data.error || 'Failed to fetch metadata.');
         }
       } catch (err) {
-        console.error('Fetch Error:', err);
-        setError('An error occurred while fetching analysis data.');
+        console.error('Fetch error:', err);
+        setError('An error occurred while fetching the metadata.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAnalysis();
+    fetchMetadata();
   }, [website]);
 
-  if (loading) return <p>Loading analysis...</p>;
-  if (error) return <p>Error: {error}</p>;
+  if (loading) {
+    return <p>Loading analysis...</p>;
+  }
+
+  if (error) {
+    return <p style={{ color: 'red' }}>{error}</p>;
+  }
 
   return (
     <div>
-      <h1>On-Page Analysis for {website}</h1>
-      <div>
-        <h2>Metadata</h2>
-        <ul>
-          <li><strong>Title:</strong> {data.pageTitle || 'N/A'}</li>
-          <li><strong>Meta Description:</strong> {data.metaDescription || 'N/A'}</li>
-          <li><strong>Canonical URL:</strong> {data.canonicalUrl || 'N/A'}</li>
-        </ul>
+      <h1>Analysis Results for {website}</h1>
+      <h2>Page Title</h2>
+      <p>{metadata.pageTitle}</p>
 
-        <h2>SEO Essentials</h2>
-        <ul>
-          <li><strong>SSL:</strong> {data.sslStatus}</li>
-          <li><strong>Robots.txt:</strong> {data.robotsTxtStatus}</li>
-          <li><strong>Indexable:</strong> {data.isIndexable}</li>
-          <li><strong>Sitemap:</strong> {data.sitemapStatus}</li>
-        </ul>
+      <h2>Meta Description</h2>
+      <p>{metadata.metaDescription}</p>
 
-        <h2>Content Analysis</h2>
+      <h2>Canonical URL</h2>
+      <p>{metadata.canonicalUrl}</p>
+
+      <h2>SSL Status</h2>
+      <p>{metadata.sslStatus}</p>
+
+      <h2>Headings</h2>
+      {metadata.headings.length > 0 ? (
         <ul>
-          <li><strong>Headings:</strong></li>
-          {data.headings.map((heading, index) => (
+          {metadata.headings.map((heading, index) => (
             <li key={index}>
               {heading.tag}: {heading.text}
             </li>
           ))}
         </ul>
-      </div>
+      ) : (
+        <p>No headings found.</p>
+      )}
     </div>
   );
 }
