@@ -1,49 +1,73 @@
 import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import ResultRow from '../components/ResultRow';
+import MessageBox from '../components/MessageBox';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 export default function Results() {
   const router = useRouter();
   const { keyword } = router.query;
 
-  const [results, setResults] = useState([]);
+  const [mapPackResults, setMapPackResults] = useState([]);
+  const [organicResults, setOrganicResults] = useState([]);
+  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!keyword) return;
 
-    const fetchResults = async () => {
+    const fetchData = async () => {
       try {
         const res = await fetch(`/api/search?keyword=${encodeURIComponent(keyword)}`);
-        if (!res.ok) throw new Error('Failed to fetch results.');
-
         const data = await res.json();
-        setResults(data.organicResults || []);
-      } catch (err) {
-        setError(err.message);
+
+        if (res.ok) {
+          setMapPackResults(data.mapPackResults || []);
+          setOrganicResults(data.organicResults || []);
+        } else {
+          setMessage(data.message || 'An error occurred.');
+        }
+      } catch (error) {
+        console.error('Fetch Error:', error);
+        setMessage('An error occurred while fetching data.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchResults();
+    fetchData();
   }, [keyword]);
 
   if (loading) {
-    return <p>Loading search results...</p>;
-  }
-
-  if (error) {
-    return <p>Error: {error}</p>;
+    return (
+      <div className="loading-container">
+        <MessageBox type="info" message="Loading..." />
+      </div>
+    );
   }
 
   return (
-    <div>
-      <h1>Search Results for "{keyword}"</h1>
-      {results.map((result, index) => (
-        <ResultRow key={index} data={result} type="organic" />
-      ))}
-    </div>
+    <ErrorBoundary>
+      <div className="results-container">
+        {message && <MessageBox type="error" message={message} />}
+        <h1>Search Results for "{keyword}"</h1>
+        {mapPackResults.length > 0 && (
+          <>
+            <h2>Map Pack Results</h2>
+            {mapPackResults.map((result, index) => (
+              <ResultRow key={index} data={result} type="map" />
+            ))}
+          </>
+        )}
+        {organicResults.length > 0 && (
+          <>
+            <h2>Organic Results</h2>
+            {organicResults.map((result, index) => (
+              <ResultRow key={index} data={result} type="organic" />
+            ))}
+          </>
+        )}
+      </div>
+    </ErrorBoundary>
   );
 }
