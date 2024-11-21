@@ -1,76 +1,53 @@
-import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
-import MessageBox from '../components/MessageBox';
+const cheerio = require('cheerio');
+const https = require('https');
 
-export default function Analyze() {
-  const router = useRouter();
-  const { website, keyword } = router.query;
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method Not Allowed' });
+    return;
+  }
 
-  const [data, setData] = useState(null);
-  const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(true);
+  let body = '';
+  req.on('data', (chunk) => {
+    body += chunk.toString();
+  });
 
-  useEffect(() => {
-    if (!website || !keyword) return;
+  req.on('end', async () => {
+    const params = new URLSearchParams(body);
+    const websiteParam = params.get('website');
+    const keywordParam = params.get('keyword');
 
-    const fetchAnalysis = async () => {
-      try {
-        const res = await fetch('/api/analyze', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: `website=${encodeURIComponent(website)}&keyword=${encodeURIComponent(keyword)}`,
-        });
-        const analysisData = await res.json();
+    if (!websiteParam || !keywordParam) {
+      res.status(400).json({ error: 'Please provide both a website URL and a keyword.' });
+      return;
+    }
 
-        if (res.ok) {
-          setData(analysisData);
-        } else {
-          setMessage(analysisData.error || 'An error occurred while analyzing the page.');
-        }
-      } catch (error) {
-        console.error('Analysis Fetch Error:', error);
-        setMessage('An error occurred while fetching analysis data.');
-      } finally {
-        setLoading(false);
+    try {
+      const url = websiteParam.startsWith('http') ? websiteParam : `https://${websiteParam}`;
+      const response = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'text/html' },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error fetching website: ${response.statusText}`);
       }
-    };
 
-    fetchAnalysis();
-  }, [website, keyword]);
+      const html = await response.text();
+      const $ = cheerio.load(html);
 
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <MessageBox type="info" message="Analyzing..." />
-      </div>
-    );
-  }
+      const title = $('title').text() || 'N/A';
+      const metaDescription = $('meta[name="description"]').attr('content') || 'N/A';
+      const h1 = $('h1').first().text() || 'N/A';
 
-  if (message) {
-    return (
-      <div className="error-container">
-        <MessageBox type="error" message={message} />
-      </div>
-    );
-  }
-
-  return (
-    <div className="analysis-container">
-      <h1>Analysis Results for {website}</h1>
-      <pre>{JSON.stringify(data, null, 2)}</pre>
-      <style jsx>{`
-        .analysis-container {
-          padding: 20px;
-        }
-        .loading-container {
-          padding: 20px;
-        }
-        .error-container {
-          padding: 20px;
-        }
-      `}</style>
-    </div>
-  );
+      res.status(200).json({
+        title,
+        metaDescription,
+        h1,
+        success: true,
+      });
+    } catch (error) {
+      console.error('Analyze API Error:', error.message);
+      res.status(500).json({ error: 'An error occurred while analyzing the page.' });
+    }
+  });
 }
