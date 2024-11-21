@@ -1,20 +1,32 @@
+import { useRouter } from 'next/router';
+
 export default function ResultRow({ data, type }) {
-  const handleAnalyzeClick = () => {
-    if (data.url) {
-      window.location.href = `/api/analyze?url=${encodeURIComponent(data.url)}`;
-    }
+  const router = useRouter();
+
+  const handleAnalyze = () => {
+    router.push(`/results?url=${encodeURIComponent(data.url)}&type=${type}`);
   };
 
   return (
-    <div style={{ border: '1px solid #ccc', margin: '10px 0', padding: '10px', borderRadius: '5px' }}>
-      <h3>{type === 'map' ? data.business_name : data.page_title}</h3>
+    <div className="result-row">
+      <h4>
+        {type === 'map' ? data.business_name : data.page_title} (Rank: {type === 'map' ? data.rank_in_map_pack : data.rank_in_organic})
+      </h4>
       <p>{type === 'map' ? data.address : data.page_description}</p>
-      <p>
-        URL: <a href={data.url} target="_blank" rel="noopener noreferrer">{data.url}</a>
-      </p>
-      <button onClick={handleAnalyzeClick} style={{ padding: '5px 10px', cursor: 'pointer' }}>
-        Analyze Competitor
-      </button>
+      <button onClick={handleAnalyze}>Analyze</button>
+      <style jsx>{`
+        .result-row {
+          border: 1px solid #ccc;
+          padding: 10px;
+          margin-bottom: 10px;
+        }
+        h4 {
+          margin: 0 0 5px 0;
+        }
+        p {
+          margin: 0 0 10px 0;
+        }
+      `}</style>
     </div>
   );
 }
