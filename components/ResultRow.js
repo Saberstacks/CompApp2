@@ -1,33 +1,22 @@
-export default function ResultRow({ data, type }) {
-  const handleAnalyze = () => {
-    if (data.url) {
-      // Use window.open to ensure a new tab is created
-      const encodedUrl = encodeURIComponent(data.url);
-      const analyzeUrl = `/onPageAnalysis?website=${encodedUrl}`;
-      window.open(analyzeUrl, '_blank');
-    } else {
-      alert('No valid URL available for analysis.');
-    }
-  };
+import { useRouter } from 'next/router';
 
-  return (
-    <div className="result-row">
-      <h4>{type === 'map' ? data.business_name : data.page_title}</h4>
-      <p>{type === 'map' ? data.address : data.page_description}</p>
-      <button onClick={handleAnalyze}>Analyze</button>
-      <style jsx>{`
-        .result-row {
-          border: 1px solid #ccc;
-          padding: 10px;
-          margin-bottom: 10px;
+export default function ResultRow({ data }) {
+    const router = useRouter();
+
+    const handleAnalyze = () => {
+        if (data.url) {
+            const encodedURL = encodeURIComponent(data.url.trim());
+            router.push(`/onPageAnalysis?website=${encodedURL}`, '_blank'); // Open in a new tab
+        } else {
+            alert('No valid URL available for analysis.');
         }
-        h4 {
-          margin: 0 0 5px;
-        }
-        p {
-          margin: 0 0 10px;
-        }
-      `}</style>
-    </div>
-  );
+    };
+
+    return (
+        <div className="result-row">
+            <h4>{data.page_title}</h4>
+            <p>{data.page_description}</p>
+            <button onClick={handleAnalyze}>Analyze</button>
+        </div>
+    );
 }
